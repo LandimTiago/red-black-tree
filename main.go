@@ -110,7 +110,7 @@ func (tree *RedBlackTree) fixInsert(node *Node) {
 				grandparent.color = RED
 				node = grandparent
 			} else {
-				if node == node.parent.left {
+				if node != nil && node == node.parent.left {
 					node = node.parent
 					tree.rightRotate(node)
 				}
@@ -193,21 +193,202 @@ func colorToString(color bool) string {
 	return "⚫"
 }
 
+// Remove um nó com o valor especificado
+func (tree *RedBlackTree) Delete(price int) {
+	// Localizar o nó a ser removido
+	nodeToDelete := tree.search(tree.root, price)
+
+	if nodeToDelete == nil {
+		// Valor não encontrado
+		return
+	}
+
+	tree.deleteNode(nodeToDelete)
+}
+
+// Busca por um valor na árvore ( auxiliar para a remoção )
+func (tree *RedBlackTree) search(node *Node, price int) *Node {
+
+	if node == nil || node.price == price {
+		return node
+	}
+
+	if price < node.price {
+		return tree.search(node.left, price)
+	}
+
+	return tree.search(node.right, price)
+}
+
+// Função de remoção de um nó da árvore
+func (tree *RedBlackTree) deleteNode(node *Node) {
+	var child, replacement *Node
+	originalColor := node.color
+
+	if node.left == nil {
+		// Caso 1: Sem filho à esquerda (inclui nó folha)
+		child = node.right
+		tree.transplant(node, node.right)
+	} else if node.right == nil {
+		// Caso 2: Sem filho à direita
+		child = node.left
+		tree.transplant(node, node.left)
+	} else {
+		// Caso 3: Nó com dois filhos → encontrar sucessor
+		replacement = tree.minimum(node.right)
+		originalColor = replacement.color
+		child = replacement.right
+
+		if replacement.parent == node {
+			if child != nil {
+				child.parent = replacement
+			}
+		} else {
+			tree.transplant(replacement, replacement.right)
+			replacement.right = node.right
+			replacement.right.parent = replacement
+		}
+
+		tree.transplant(node, replacement)
+		replacement.left = node.left
+		replacement.left.parent = replacement
+		replacement.color = node.color
+	}
+
+	// Corrigir as propriedades Red-Black após remoção de um nó preto
+	if originalColor == BLACK {
+		tree.fixDelete(child)
+	}
+}
+
+// Substitui um nó por outro (auxiliar para a remoção)
+func (tree *RedBlackTree) transplant(u, v *Node) {
+	if u.parent == nil {
+		tree.root = v
+	} else if u == u.parent.left {
+		u.parent.left = v
+	} else {
+		u.parent.right = v
+	}
+
+	if v != nil {
+		v.parent = u.parent
+	}
+}
+
+// Corrige a árvore após a remoção
+func (tree *RedBlackTree) fixDelete(node *Node) {
+	for node != tree.root && (node == nil || node.color == BLACK) {
+		if node == node.parent.left {
+			sibling := node.parent.right
+
+			// Caso 1: Irmão é vermelho
+			if sibling != nil && sibling.color == RED {
+				sibling.color = BLACK
+				node.parent.color = RED
+				tree.leftRotate(node.parent)
+				sibling = node.parent.right
+			}
+
+			// Caso 2: Ambos os filhos do irmão são pretos
+			if (sibling.left == nil || sibling.left.color == BLACK) &&
+				(sibling.right == nil || sibling.right.color == BLACK) {
+				if sibling != nil {
+					sibling.color = RED
+				}
+				node = node.parent
+			} else {
+				// Caso 3: Irmão tem filho vermelho à esquerda
+				if sibling.right == nil || sibling.right.color == BLACK {
+					if sibling.left != nil {
+						sibling.left.color = BLACK
+					}
+					sibling.color = RED
+					tree.rightRotate(sibling)
+					sibling = node.parent.right
+				}
+
+				// Caso 4: Irmão tem filho vermelho à direita
+				if sibling != nil {
+					sibling.color = node.parent.color
+				}
+				node.parent.color = BLACK
+				if sibling.right != nil {
+					sibling.right.color = BLACK
+				}
+				tree.leftRotate(node.parent)
+				node = tree.root
+			}
+		} else {
+			// Espelho dos casos acima para o irmão à esquerda
+			sibling := node.parent.left
+
+			if sibling != nil && sibling.color == RED {
+				sibling.color = BLACK
+				node.parent.color = RED
+				tree.rightRotate(node.parent)
+				sibling = node.parent.left
+			}
+
+			if (sibling.right == nil || sibling.right.color == BLACK) &&
+				(sibling.left == nil || sibling.left.color == BLACK) {
+				if sibling != nil {
+					sibling.color = RED
+				}
+				node = node.parent
+			} else {
+				if sibling.left == nil || sibling.left.color == BLACK {
+					if sibling.right != nil {
+						sibling.right.color = BLACK
+					}
+					sibling.color = RED
+					tree.leftRotate(sibling)
+					sibling = node.parent.left
+				}
+
+				if sibling != nil {
+					sibling.color = node.parent.color
+				}
+				node.parent.color = BLACK
+				if sibling.left != nil {
+					sibling.left.color = BLACK
+				}
+				tree.rightRotate(node.parent)
+				node = tree.root
+			}
+		}
+	}
+
+	if node != nil {
+		node.color = BLACK
+	}
+}
+
+// Encontra o menor nó de uma subárvore
+func (tree *RedBlackTree) minimum(node *Node) *Node {
+	current := node
+	for current.left != nil {
+		current = current.left
+	}
+	return current
+}
+
 func main() {
 	tree := &RedBlackTree{}
 
-	// Inserindo valores na árvore
-	values := []int{10, 20, 30, 15, 25, 5, 1}
+	// Inserir alguns valores
+	values := []int{20, 15, 25, 10, 18, 22, 30}
 	for _, v := range values {
 		tree.Insert(v)
 	}
 
-	// Exibindo a árvore em ordem
-	fmt.Println("Árvore em ordem (in-order traversal):")
+	fmt.Println("Árvore em ordem (antes da remoção):")
 	inOrderTraversal(tree.root)
+	fmt.Println()
 
-	fmt.Println("\n")
-
-	// Exibindo a raiz da árvore
-	fmt.Printf("Raiz: %d (%s)\n", tree.root.price, colorToString(tree.root.color))
+	// Remover um valor
+	tree.Delete(15)
+	fmt.Println("Árvore em ordem (após remover 15):")
+	inOrderTraversal(tree.root)
+	fmt.Println()
 }
