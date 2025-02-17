@@ -1,6 +1,6 @@
 # Red-Black Tree
 
-Estudos direcionados ao funcionamento de order books em uma aplicação golang
+Estudos direcionados ao funcionamento de order books em uma aplicação golang aplicando a regra de **Red-Black Tree**
 
 ## 📌 Estruturando os Nós da Red-Black Tree
 
@@ -332,7 +332,7 @@ Se tudo estiver correto, o programa exibirá os valores em ordem crescente, com 
 
 Ótimo! Vamos avançar para a remoção de nós na Red-Black Tree. Isso é um pouco mais complexo do que a inserção, porque precisamos manter as propriedades da árvore após a remoção.
 
-## 📌 Passos para Implementar a Remoção
+## 📌 Passos para Implementar a Remoção de nós
 
 1. Encontrar o nó a ser removido: Realizamos uma busca pelo nó que contém o valor (ou preço, no caso do order book).
 2. Substituir o nó (se necessário):
@@ -583,3 +583,155 @@ go run main.go
 
 1. A árvore será impressa antes e depois da remoção do nó com valor 15.
 2. A estrutura permanecerá válida e balanceada.
+
+## 🔍 Buscas Otimizadas
+
+Para implementar funcionalidades de busca otimizadas, podemos adicionar métodos que utilizam as propriedades da Red-Black Tree para localizar valores com eficiência. Essas funções incluem:
+
+1. Busca de valor exato (Search): Localiza um nó que contém exatamente o valor fornecido (**Modificação**).
+2. Lower Bound: Encontra o menor valor maior ou igual ao valor fornecido.
+3. Upper Bound: Encontra o menor valor estritamente maior que o valor fornecido.
+
+Abaixo, apresento as implementações com explicações detalhadas.
+
+## 🔍 Search (Modificação)
+
+A função Search procura o valor exato na árvore. Utiliza a propriedade da BST (Binary Search Tree) para decidir, em cada nó, se deve continuar na subárvore à esquerda ou à direita.
+
+```go
+func (tree *models.RedBlackTree) Search(value int) *models.Node {
+	current := tree.Root
+
+	for current != nil {
+		if value == current.Price {
+			return current // Valor encontrado
+		} else if value < current.Price {
+			current = current.Left // Buscar na subárvore à esquerda
+		} else {
+			current = current.Right // Buscar na subárvore à direita
+		}
+	}
+
+	return nil // Valor não encontrado
+}
+```
+
+### 📝 Explicação
+
+- Começamos na raiz da árvore e seguimos:
+  - Para a esquerda, se o valor buscado for menor que o nó atual.
+  - Para a direita, caso contrário.
+- A busca termina quando encontramos o valor ou alcançamos um nó nil (árvore vazia ou valor ausente).
+
+## 🔍 Lower Bound
+
+Essa função retorna o menor valor na árvore que seja maior ou igual ao valor fornecido. Útil par encontrar um limite inferior em intervalos
+
+```go
+func (tree *models.RedBlackTree) LowerBound(value int) *models.Node {
+	var result *models.Node
+	current := tree.Root
+
+	for current != nil {
+		if value <= current.Price {
+			result = current       // Atualiza o resultado com um possível candidato
+			current = current.Left // Continua na subárvore à esquerda
+		} else {
+			current = current.Right // Continua na subárvore à direita
+		}
+	}
+
+	return result
+}
+
+```
+
+### 📝 Explicação
+
+- Se o valor do nó atual for maior ou igual ao valor fornecido:
+  - Salvamos esse nó como um candidato ao resultado.
+  - Continuamos buscando na subárvore à esquerda (em busca de um valor ainda menor, mas válido).
+- Se for menor, seguimos para a direita.
+- No final, result contém o nó com o menor valor que satisfaz a condição.
+
+## 🔍 Upper Bound
+
+A função retorna o menor valor na árvore que seja estritamente maior que o valor fornecido.
+
+```go
+func (tree *models.RedBlackTree) UpperBound(value int) *models.Node {
+	var result *models.Node
+	current := tree.Root
+
+	for current != nil {
+		if value < current.Price {
+			result = current       // Atualiza o resultado com um possível candidato
+			current = current.Left // Continua na subárvore à esquerda
+		} else {
+			current = current.Right // Continua na subárvore à direita
+		}
+	}
+
+	return result
+}
+
+```
+
+### 📝 Explicação
+
+- Semelhante ao Lower Bound, mas neste caso só consideramos nós cujo valor seja estritamente maior que o valor fornecido.
+- Atualizamos o candidato e seguimos buscando na subárvore à esquerda para tentar encontrar um valor menor que ainda seja válido.
+
+## 🔧 Função Auxiliar para Testes de Busca
+
+Podemos adicionar uma função para imprimir os resultados das buscas e validar o comportamento.
+
+```go
+func printNodeResult(node *models.Node, description string) {
+	if node != nil {
+		fmt.Printf("%s: %d\n", description, node.Price)
+	} else {
+		fmt.Printf("%s: Valor não encontrado\n", description)
+	}
+}
+
+```
+
+## 📌 Testando as Funções
+
+Um exemplo de uso das funções acima:
+
+```go
+func main() {
+    // ------ restante do codigo anterior ------ //
+
+	// Criando uma árvore Red-Black
+	tree := &models.RedBlackTree{}
+	tree.Insert(20)
+	tree.Insert(15)
+	tree.Insert(25)
+	tree.Insert(10)
+	tree.Insert(30)
+
+	// Testando buscas otimizadas
+	printNodeResult(tree.Search(15), "Search por 15")
+	printNodeResult(tree.LowerBound(18), "Lower Bound de 18")
+	printNodeResult(tree.UpperBound(18), "Upper Bound de 18")
+	printNodeResult(tree.LowerBound(25), "Lower Bound de 25")
+	printNodeResult(tree.UpperBound(30), "Upper Bound de 30 (não existe)")
+}
+
+```
+
+Saída esperada:
+
+```sh
+Search por 15: 15
+Lower Bound de 18: 20
+Upper Bound de 18: 20
+Lower Bound de 25: 25
+Upper Bound de 30 (não existe): Valor não encontrado
+
+```
+
+Essas funções otimizadas permitem buscas eficientes em árvores Red-Black, aproveitando as propriedades de ordenação das BSTs e garantindo a manutenção das regras de balanceamento.
