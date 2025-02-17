@@ -196,7 +196,7 @@ func colorToString(color bool) string {
 // Remove um nó com o valor especificado
 func (tree *RedBlackTree) Delete(price int) {
 	// Localizar o nó a ser removido
-	nodeToDelete := tree.search(tree.root, price)
+	nodeToDelete := tree.search(price)
 
 	if nodeToDelete == nil {
 		// Valor não encontrado
@@ -207,17 +207,20 @@ func (tree *RedBlackTree) Delete(price int) {
 }
 
 // Busca por um valor na árvore ( auxiliar para a remoção )
-func (tree *RedBlackTree) search(node *Node, price int) *Node {
+func (tree *RedBlackTree) search(value int) *Node {
+	current := tree.root
 
-	if node == nil || node.price == price {
-		return node
+	for current != nil {
+		if value == current.price {
+			return current // Valor encontrado
+		} else if value < current.price {
+			current = current.left // Buscar na subárvore à esquerda
+		} else {
+			current = current.right // Buscar na subárvore à direita
+		}
 	}
 
-	if price < node.price {
-		return tree.search(node.left, price)
-	}
-
-	return tree.search(node.right, price)
+	return nil // Valor não encontrado
 }
 
 // Função de remoção de um nó da árvore
@@ -373,6 +376,47 @@ func (tree *RedBlackTree) minimum(node *Node) *Node {
 	return current
 }
 
+func (tree *RedBlackTree) lowerBound(value int) *Node {
+	var result *Node
+
+	current := tree.root
+
+	for current != nil {
+		if value <= current.price {
+			result = current
+			current = current.left
+		} else {
+			current = current.right
+		}
+	}
+
+	return result
+}
+
+func (tree *RedBlackTree) upperBound(value int) *Node {
+	var result *Node
+	current := tree.root
+
+	for current != nil {
+		if value < current.price {
+			result = current       // Atualiza o resultado com um possível candidato
+			current = current.left // Continua na subárvore à esquerda
+		} else {
+			current = current.right // Continua na subárvore à direita
+		}
+	}
+
+	return result
+}
+
+func printNodeResult(node *Node, description string) {
+	if node != nil {
+		fmt.Printf("%s: %d\n", description, node.price)
+	} else {
+		fmt.Printf("%s: Valor não encontrado\n", description)
+	}
+}
+
 func main() {
 	tree := &RedBlackTree{}
 
@@ -391,4 +435,20 @@ func main() {
 	fmt.Println("Árvore em ordem (após remover 15):")
 	inOrderTraversal(tree.root)
 	fmt.Println()
+	fmt.Println()
+	fmt.Println()
+
+	// Criando uma árvore Red-Black
+	tree.Insert(20)
+	tree.Insert(15)
+	tree.Insert(25)
+	tree.Insert(10)
+	tree.Insert(30)
+
+	// Testando buscas otimizadas
+	printNodeResult(tree.search(15), "Search por 15")
+	printNodeResult(tree.lowerBound(18), "Lower Bound de 18")
+	printNodeResult(tree.upperBound(18), "Upper Bound de 18")
+	printNodeResult(tree.lowerBound(25), "Lower Bound de 25")
+	printNodeResult(tree.upperBound(30), "Upper Bound de 30 (não existe)")
 }
